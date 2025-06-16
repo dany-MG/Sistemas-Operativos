@@ -114,15 +114,17 @@ char* shell_read_line(void){
     char *line;
     size_t buffer_size;
     char cwd[BUFSIZ];
+    char* user;
 
     line = NULL;
     buffer_size = 0;
 
+    user = get_user();
     if(isatty(fileno(stdin))){
         if(status)
-            p("🃏"P"[%s]"Y"[%d]"RST"🃏"P"↪ "RST, Getcwd(cwd, BUFSIZ), status);
+            p(PINK"┌──♦️(%s)"P"--[%s]"Y"[%d]🃏"PINK"\n└─>"RST, user, Getcwd(cwd, BUFSIZ), status);
         else
-            p("🃏"P"[%s]"RST"🃏"P"↪ "RST, Getcwd(cwd, BUFSIZ));
+            p(PINK"┌──♦️(%s)"P"-[%s]🃏"PINK"\n└─>"RST, user, Getcwd(cwd, BUFSIZ));
     }
     Getline(&line, &buffer_size, stdin);
     return (line);

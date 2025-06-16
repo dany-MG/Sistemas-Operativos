@@ -72,6 +72,7 @@ void Getline(char **lineptr, size_t *n , FILE *stream);
 char *Getcwd(char *buf, size_t size);
 void *Malloc(size_t buffer_size);
 void *Realloc(void *ptr, size_t buffer_size);
+char* get_user();
 pid_t Fork();
 pid_t Wait(int *status);
 void Execvp(const char *file, char *const argv[]);
