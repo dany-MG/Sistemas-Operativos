@@ -2,9 +2,9 @@
     Sistemas Opertivos 4CM1
     Proyecto: Mini Shell
     Equipo: 
-           -Jairo
+           -Arroyo Garcia Jairo Andrey
            -Manrique Godinez Daniel Alejandro
-           -
+           -Resendiz Garcia Renata
 
     Fecha de entrega: 17-Junio-2025
 */
