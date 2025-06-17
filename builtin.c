@@ -47,13 +47,17 @@ int	shell_echo(char **args){
 	return (0);
 }
 
-
 int shell_cd(char **args){
     Chdir(args[1]);
     return (0); 
 }
 
 /*
+    Built-in commands
+    These commands are implemented in the shell and do not require external programs.
+    They are executed directly by the shell without forking a new process.
+    The list of built-in commands includes:
+    
     abbr
     and
     argparse

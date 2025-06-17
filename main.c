@@ -1,15 +1,20 @@
 /*
-    Sistemas Opertivos 4CM
+    Sistemas Opertivos 4CM1
+    Proyecto: Mini Shell
+    Equipo: 
+           -Jairo
+           -Manrique Godinez Daniel Alejandro
+           -
 
-
+    Fecha de entrega: 17-Junio-2025
 */
 
 
 #include "shell.h"
 
 /*
-    builtins? -> llamarlo
-    si no -> fork, execvp, wait
+    builtins? -> call them 
+    else -> fork, execvp, wait
 */
 
 int status = 0;
@@ -23,12 +28,14 @@ t_builtin g_builtin[]={
 };
 
 void shell_launch(char **args){
-      int pipes[MAX_BUFF][2];
+    int pipes[MAX_BUFF][2];
     int num_cmds = 0;
     char** curr_command = args;
     pid_t pid;
+    int std_in = dup(STDIN_FILENO);
+    int std_out = dup(STDOUT_FILENO);
 
-    //counting number of commands & erasing |
+    // counting commands and replacing pipes with NULL
     for(int i = 0; args[i] != NULL; i++){
         if(!strcmp(args[i], "|")){
             num_cmds++;
@@ -37,21 +44,31 @@ void shell_launch(char **args){
     }
     num_cmds++;
 
-    //creating pipes
-    for(int i = 0; i<num_cmds - 1; i++){
+    // Creting pipes
+    for(int i = 0; i < num_cmds - 1; i++){
         if(pipe(pipes[i]) == -1){
             perror(RED"Error: pipe failed!"RST);
             return;
         }
     }
 
-    for(int i = 0; i<num_cmds; i++){
+    for(int i = 0; i < num_cmds; i++){
         pid = Fork();
         if(pid == 0){
-            if(i>0) dup2(pipes[i-1][0], STDIN_FILENO);
-            if(i<num_cmds-1) dup2(pipes[i][1], STDOUT_FILENO);
+            // input redirection
+            if(i > 0) {
+                dup2(pipes[i-1][0], STDIN_FILENO);
+            }
 
-            for(int j = 0; j<num_cmds-1; j++){
+            // output redirection
+            if(i < num_cmds-1) {
+                dup2(pipes[i][1], STDOUT_FILENO);
+            } else {
+                handle_redirections(curr_command, std_in, std_out, STDERR_FILENO);
+            }
+
+            // closing unused pipes
+            for(int j = 0; j < num_cmds-1; j++){
                 close(pipes[j][0]);
                 close(pipes[j][1]);
             }
@@ -67,9 +84,15 @@ void shell_launch(char **args){
         close(pipes[i][1]);
     }
 
-    for(int i = 0; i< num_cmds; i++){
+    for(int i = 0; i < num_cmds; i++){
         Wait(&status);
     }
+
+    // restore original file descriptors
+    dup2(std_in, STDIN_FILENO);
+    dup2(std_out, STDOUT_FILENO);
+    close(std_in);
+    close(std_out);
 }
 
 void shell_exec(char **args){
@@ -134,26 +157,47 @@ char **shell_split_line(char *line) {
     char **tokens = Malloc(BUFSIZ * sizeof(char*));
     int pos = 0;
     char *token;
-    char *ptrAux;
+    char *saveptr;
 
-    token = strtok(line, DEL);
+    // spliting basic delimiters
+    token = strtok_r(line, DEL, &saveptr);
     while (token != NULL) {
         if (strcmp(token, "<") == 0 || strcmp(token, ">") == 0 || 
-            strcmp(token, "<<") == 0 || strcmp(token, ">>") == 0) {
+            strcmp(token, "<<") == 0 || strcmp(token, ">>") == 0 ||
+            strcmp(token, "|") == 0) {
             tokens[pos++] = token;
-            token = strtok(NULL, DEL);
-            if (token != NULL) {
+        } else {
+            char *aux_token = token;
+            while (*aux_token) {
+                if (*aux_token == '>' || *aux_token  == '<' || *aux_token == '|') {
+                    // spliting tokens
+                    if (aux_token != token) {
+                        char *prev_cmd = strndup(token, aux_token - token);
+                        tokens[pos++] = prev_cmd;
+                    }
+                    char op[3];
+                    // operators (>>, <<)
+                    if ((*aux_token == '>' && *(aux_token+1) == '>') || 
+                        (*aux_token == '<' && *(aux_token+1) == '<')) {
+                        op[1] = *aux_token;
+                        op[2] = '\0';
+                        aux_token++;
+                    }
+                    tokens[pos++] = strdup(op);
+                    token = aux_token + 1;
+                    aux_token = token - 1;
+                }
+                aux_token++;
+            }
+            if (*token) {
                 tokens[pos++] = token;
             }
-        } else {
-            tokens[pos++] = token;
         }
-        token = strtok(NULL, " \t\n");
+        token = strtok_r(NULL, DEL, &saveptr);
     }
     tokens[pos] = NULL;
     return tokens;
 }
-
 
 int main(){
     //signals

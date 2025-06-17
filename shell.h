@@ -13,12 +13,7 @@
 #include <fcntl.h>		
 
 #define MAX_BUFF 200
-#define N_JOBS 20
-#define FOREGROUND 0
-#define EXECUTED 'E'
-#define STOPPED 'S'
-#define FINALIZED 'F'
-#define NONE 'N'
+
 
 /*
     ** ANSI Color codes
@@ -28,6 +23,7 @@
     ** RED  -Red
     ** RST  -Reset def color
 */
+
 #define Y   "\033[1;33m"
 #define G   "\033[1;32m"
 #define C   "\033[1;36m"
@@ -35,6 +31,7 @@
 #define PINK "\033[1;38;5;218m"
 #define RED   "\033[1;31m"
 #define RST   "\033[0m"
+
 #define p(...) printf(__VA_ARGS__)
 #define DEL " \n\t\v\f\r"
 #define e(E_S) exit(EXIT_SUCCESS)
@@ -45,15 +42,6 @@ typedef struct s_builtin
     const char *builtin_name;
     int (*foo)(char **av);
 }t_builtin;
-
-typedef struct Process_info{
-    pid_t pid;
-    char status;                 //N (None), E (Executing), S (Stopped), F (Finished)
-    char command_line[MAX_BUFF];
-    struct Process_info* next;
-}Process_info;
-
-extern Process_info *process_list;
 
 //Built-in commands
 

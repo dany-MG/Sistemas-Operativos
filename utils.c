@@ -194,86 +194,83 @@ void spinnerLoad(){
     exit(EXIT_SUCCESS);
 }
 
-void handle_redirections(char** args, int std_in, int std_out, int std_err){
+void handle_redirections(char** args, int std_in, int std_out, int std_err) {
     int input = -1, output = -1;
     int heredoc[2] = {-1, -1};
-    for(int i = 1; args[i] != NULL; i++){
-        if(!strcmp(args[i], "<")){
-            if(args[i+1] == NULL){
+    
+    for(int i = 0; args[i] != NULL; i++) {
+        if(!strcmp(args[i], "<")) {
+            if(args[i+1] == NULL) {
                 fprintf(stderr, RED"Error: no input file specified\n"RST);
-                dup2(std_in, 0);
-                dup2(std_out, 1);
-                dup2(std_err, 2);
-                return;
+                continue;
             }
             input = open(args[i+1], O_RDONLY);
-            if(input < 0 || dup2(input, 0) < 0){
-                fprintf(stderr,RED"Error: can't open input file\n"RST);
-                dup2(std_in, 0);
-                dup2(std_out, 1);
-                dup2(std_err, 2);
-                return;
+            if(input < 0 || dup2(input, STDIN_FILENO) < 0) {
+                perror(RED"Error: can't open input file"RST);
             }
             args[i] = NULL;
             args[i+1] = NULL;
+            i++;
         }
-        else if(!strcmp(args[i], "<<")){
-            if (!args[i+1]) {
-                fprintf(stderr, RED "Error: delimiter missing\n" RST);
-                return;
+        else if(!strcmp(args[i], "<<")) {
+            if(args[i+1] == NULL) {
+                fprintf(stderr, RED"Error: no delimiter specified for heredoc\n"RST);
+                continue;
             }
-            if(args[i+1] == NULL){
-                fprintf(stderr, RED"Error: no delimiter specified for heredoc\n\n"RST);
-                dup2(std_in, 0);
-                dup2(std_out, 1);
-                dup2(std_err, 2);
-                return;
-            }
-            if(pipe(heredoc) == -1){
-                fprintf(stderr,RED "Error: pipe failed\n" RST);
-                dup2(std_in, 0);
-                dup2(std_out, 1);
-                dup2(std_err, 2);
-                return;
+            if(pipe(heredoc) == -1) {
+                perror(RED"Error: pipe failed"RST);
+                continue;
             }
             handle_heredoc(heredoc[1], args[i+1]);
-            input = open(args[i+1], O_RDONLY);
-            if(dup2(heredoc[0], 0) == -1){
-                fprintf(stderr,RED"Error: dup2 failed for heredoc\n"RST);
-                dup2(std_in, 0);
-                dup2(std_out, 1);
-                dup2(std_err, 2);
-                close(heredoc[0]);
-                close(heredoc[1]);
-                return;
+            if(dup2(heredoc[0], STDIN_FILENO) == -1) {
+                perror(RED"Error: dup2 failed for heredoc"RST);
             }
             args[i] = NULL;
             args[i+1] = NULL;
+            i++;
         }
-        else if(!strcmp(args[i], ">") || !strcmp(args[i], ">>")){
-            if(args[i+1] == NULL){
+        else if(!strcmp(args[i], ">")) {
+            if(args[i+1] == NULL) {
                 fprintf(stderr, RED"Error: no output file specified\n"RST);
-                dup2(std_in, 0);
-                dup2(std_out, 1);
-                dup2(std_err, 2);
-                return;
+                continue;
             }
             output = open(args[i+1], O_WRONLY | O_CREAT | O_TRUNC, 0644);
-            if(output < 0 || dup2(output, 1) < 0){
-                fprintf(stderr,RED"Error: can't open output file\n"RST);
-                dup2(std_in, 0);
-                dup2(std_out, 1);
-                dup2(std_err, 2);
-                return;
+            if(output < 0 || dup2(output, STDOUT_FILENO) < 0) {
+                perror(RED"Error: can't open output file"RST);
             }
             args[i] = NULL;
             args[i+1] = NULL;
+            i++;
         }
-        i+=2;
+        else if(!strcmp(args[i], ">>")) {
+            if(args[i+1] == NULL) {
+                fprintf(stderr, RED"Error: no output file specified\n"RST);
+                continue;
+            }
+            output = open(args[i+1], O_WRONLY | O_CREAT | O_APPEND, 0644);
+            if(output < 0 || dup2(output, STDOUT_FILENO) < 0) {
+                perror(RED"Error: can't open output file"RST);
+            }
+            args[i] = NULL;
+            args[i+1] = NULL;
+            i++;
+        }
     }
 
-    if (input != -1) close(input);
-    if (output != -1) close(output);
+    // Compacting array & eliminating NULL entries
+    int j = 0;
+    for(int i = 0; args[i] != NULL; i++) {
+        if(args[i] != NULL) {
+            args[j++] = args[i];
+        }
+    }
+    args[j] = NULL;
+
+    // close file descriptors in  case of failure
+    if(input != -1) close(input);
+    if(output != -1) close(output);
+    if(heredoc[0] != -1) close(heredoc[0]);
+    if(heredoc[1] != -1) close(heredoc[1]);
 }
 
 char* get_user(){
